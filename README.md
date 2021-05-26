@@ -1,2 +1,2 @@
-# NLP_Text_Summarization
-In this repo, we apply NLP techniques to generate titles and summarization for songs based on their lyrics. We also use these lyrics to recommend songs.
+# Lyrics_based_Recommendation_via_Song_summaries
+In this repo, we apply NLP techniques to recommend songs using song summaries.
