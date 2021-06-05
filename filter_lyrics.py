@@ -2,42 +2,67 @@ import pandas as pd
 import numpy as np
 
 
-df =pd.read_csv('data/spotify_songs_with_lyrics.csv') #non clean input, containing duplicates and NaN
 
 
 
-df = df.dropna()  #removing NaN
-
-df['size'] = df.groupby(['artist', 'track']).transform(np.size)
 
 
+def filter_duplicate(df, output_path):
 
-df_only_with_linebreaks = df.loc[df['lyrics'].str.contains("\n")== True] #containing only the lyrics with line breaks
+    """
 
+    This function removes duplicate songs
 
-print("generating Spotify songs only lyrics with linebreaks ...")
+    It writes the result in output_path
 
+    """
 
-path_for_lyrics_with_linebreaks = 'data/spotify_songs_with_lyrics_linebreaks.csv'
-df_only_with_linebreaks[['artist', 'track', 'lyrics']].to_csv(path_for_lyrics_with_linebreaks, index=False)   #only lyrics with line breaks
+    df = df[['artist', 'track', 'lyrics']]
 
+    df['rep_cnt'] = df.groupby(['artist', 'track']).transform(np.size)
 
-print(df_only_with_linebreaks.shape[0])
+    df_dups_no_linebreak = df.loc[(df['rep_cnt']==2) & (df['lyrics'].str.contains("\n") == False)] #duplicates with no line breaks
 
+    df = pd.concat([df, df_dups_no_linebreak]).drop_duplicates(keep=False)[['artist', 'track', 'lyrics']] #no duplicates
 
-df_dups_no_break = df.loc[(df['size']==2) & (df['lyrics'].str.contains("\n") == False)] #duplicates with no line breaks
+    print("generating Spotify songs lyrics no duplicates ...")
 
-
-print(df_dups_no_break.shape[0])
-
-
-df_no_dups= pd.concat([df, df_dups_no_break]).drop_duplicates(keep=False)[['artist', 'track', 'lyrics']] #no duplicates
-
-
-print("generating Spotify songs lyrics no duplicates ...")
-
-path_for_lyrics_no_duplicates = 'data/spotify_songs_with_lyrics_no_duplicates.csv'
-df_no_dups[['artist', 'track', 'lyrics']].to_csv(path_for_lyrics_no_duplicates, index=False) #no duplicates, no Nan
+    df[['artist', 'track', 'lyrics']].to_csv(output_path, index=False) #no duplicates, no Nan
 
 
-print(df_no_dups.shape[0])
+def filter_linebreak_count(df, min_linebreak_count, output_path):
+    """
+
+    This function filters the lyrics that have less than min_linebreak_count number of linebreaks
+
+    It writes the result in output_path
+
+    """
+
+    df['linebreakcount']=df.lyrics.str.count("\n")
+
+    df = df.loc[df['linebreakcount']>=min_linebreak_count]
+
+
+    print("generating Spotify songs only lyrics with at least {} linebreaks ...".format(min_linebreak_count))
+    df[['artist', 'track', 'lyrics']].to_csv(output_path, index=False)   #only lyrics with min_linebreak_count line breaks
+
+
+def main():
+    df =pd.read_csv('data/spotify_songs_with_lyrics.csv') #non clean input, containing duplicates and NaN
+
+    df = df.dropna()  #removing NaN
+
+    min_linebreak_count=10
+
+    output_path_for_mincount = 'data/spotify_lyrics_atLeast_{}linebreaks.csv'.format(min_linebreak_count)
+
+    filter_linebreak_count(df, min_linebreak_count, output_path_for_mincount)
+
+    output_path_for_noduplicate = 'data/spotify_lyrics_noduplicate.csv'
+    filter_duplicate(df, output_path_for_noduplicate)
+
+
+
+if __name__ == "__main__":
+    main()
