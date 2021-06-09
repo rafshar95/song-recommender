@@ -1,14 +1,15 @@
 import pandas as pd
 import time
 import datetime
+import nltk
 
 
-from transformers import GPT2Tokenizer,GPT2LMHeadModel
-#from transformers import T5Tokenizer, T5Config, T5ForConditionalGeneration
-#my_model = T5ForConditionalGeneration.from_pretrained('t5-small')
-#tokenizer = T5Tokenizer.from_pretrained('t5-small')
-my_gpt2tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
-my_gpt2model =  GPT2LMHeadModel.from_pretrained('gpt2', pad_token_id=my_gpt2tokenizer.eos_token_id)
+#from transformers import GPT2Tokenizer,GPT2LMHeadModel
+from transformers import T5Tokenizer, T5Config, T5ForConditionalGeneration
+my_model = T5ForConditionalGeneration.from_pretrained('t5-small')
+tokenizer = T5Tokenizer.from_pretrained('t5-small')
+#my_gpt2tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
+#my_gpt2model =  GPT2LMHeadModel.from_pretrained('gpt2', pad_token_id=my_gpt2tokenizer.eos_token_id)
 
 
 cnt = 0
@@ -135,7 +136,16 @@ def gensim_summarize(original_text):
     from gensim.summarization import summarize
     print(summarize(original_text, word_count =  50)) #or ratio
 
-def klsum_summarize(original_text):
+def klsum_summarize(original_text, s):
+
+    global cnt
+
+    cnt +=1
+
+    if(cnt%100==0):
+        print(cnt)
+
+
     from sumy.summarizers.kl import KLSummarizer
 
     from sumy.nlp.tokenizers import Tokenizer
@@ -143,17 +153,21 @@ def klsum_summarize(original_text):
     parser=PlaintextParser.from_string(original_text,Tokenizer('english'))
 
     kl_summarizer=KLSummarizer()
-    kl_summary=kl_summarizer(parser.document,sentences_count=5)
+    kl_summary=kl_summarizer(parser.document,sentences_count=s)
 
     # Printing the summary
+    res = ""
     for sentence in kl_summary:
-        print(sentence)
+
+        res+= str(sentence)
+
+    return res
 
 
-def load_lyrics():
+def load_lyrics(infile):
 
     print('Loading lyrics...')
-    df = pd.read_csv('data/spotify_songs_with_lyrics.csv')
+    df = pd.read_csv(infile)
     df['lyrics'] = df['lyrics'].apply(str)
     return df
 
@@ -162,17 +176,34 @@ def main():
     df_lyrics = load_lyrics
     t0 = time.time()
     # Load data
-    df_lyrics = load_lyrics()
-    for f in range(1, 2):
 
-        df_lyrics['lyrics'] = df_lyrics['lyrics'].apply(lambda l: gpt2_summarize(l, fraction = f/10))
+    for f in range(3, 4):
+
+        infile = 'data/spotify_lyrics.csv'
+        df_lyrics = load_lyrics(infile)
+
+        df_lyrics['lyrics'] = df_lyrics['lyrics'].apply(lambda l: t5_summarize(l, fraction = f/10))
         # Save
-        outfile = 'dataset/data/spotify_songs_summaries_{}.csv'.format(f*10)
+        outfile = 'data/spotify_summaries_T5_{}.csv'.format(f*10)
         print(f'Saving into {outfile}')
         df_lyrics.to_csv(outfile, index=False)
 
+        """
+    for s in range(1,4):
 
-    # Get average embeddings
+        infile = 'data/spotify_lyrics_atLeast_10linebreaks.csv'
+        df_lyrics = load_lyrics(infile)
+
+        df_lyrics['lyrics'] = df_lyrics['lyrics'].apply(lambda l: klsum_summarize(l, s))
+
+        # Save
+        outfile = 'data/spotify_summaries_klsum_{}sentences.csv'.format(s)
+        print(f'Saving into {outfile}')
+        df_lyrics.to_csv(outfile, index=False)
+
+        """
+
+
     print(datetime.timedelta(seconds=time.time() - t0))
 
     """
