@@ -61,13 +61,24 @@ def eval_playlist(ranked_songs, test, index_sid):
     return result
 
 
-def evaluate(playlists, dist, output_path, num_epochs=5, test_to_seed_ratio=0.2, num_recs=100):
+def evaluate(playlists, dist, output_path, test_to_seed_ratio=0.2, num_recs=100):
     assert(100 <= num_recs <= playlists.shape[0])
     results = defaultdict(lambda: np.array([0.0, 0.0, 0.0]))
     index_sid = playlists.columns.get_loc('sid')
 
-    for n in range(num_epochs):
-        f = open(output_path + str(n) + ".csv", 'w', newline="")
+
+    """
+        put the indices of the epochs that you want to generate below
+        e.g. epochs = [0,1,2] generate the first three epochs
+
+    """
+
+    epochs = [2]
+
+    random_seed = [33, 72, 57, 78, 48]
+
+    for n in epochs:
+        f = open(output_path + "epoch" +str(n) + ".csv", 'w', newline="")
         writer = csv.writer(f)
         step = 0
         for pid, p in playlists.groupby('playlist_id'):
@@ -75,7 +86,7 @@ def evaluate(playlists, dist, output_path, num_epochs=5, test_to_seed_ratio=0.2,
             print("epoch " + str(n) + ", step " + str(step))
             if p.shape[0] <= 1:
                 continue
-            seed, test = train_test_split(p.values.tolist(), test_size=test_to_seed_ratio)
+            seed, test = train_test_split(p.values.tolist(), test_size=test_to_seed_ratio, random_state = random_seed[n])
             ranked_songs = rank_songs(playlists, dist, seed, index_sid, num_recs)
             result = np.array(eval_playlist(ranked_songs, test, index_sid))
             results['pid'] += result
@@ -104,9 +115,8 @@ def main():
 
     df3 = pd.merge(df2, df1, on=['artist', 'track'], how='left')
 
-    evaluate(df3, dist, output_path="out/")
+    evaluate(df3, dist, output_path="out/result_" + sys.argv[2][:-14][8:]) #it removes spotify prefix and embeddings suffix from the output file
 
 
 if __name__== "__main__":
     main()
-
