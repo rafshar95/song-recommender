@@ -3,53 +3,72 @@ import nltk
 import pandas as pd
 import time
 import datetime
+import sys
 
 
-def load_lyrics():
+def load_lyrics(lyrics_file):
   print('Loading lyrics...')
-  df =pd.read_csv('data/spotify_songs_with_lyrics.csv')
-  print(df)
-  df1 = pd.read_csv('data/spotify_summaries__0__0.30.csv')
-  df2 = pd.read_csv('data/spotify_summaries__1__0.30.csv')
-  df3 = pd.read_csv('data/spotify_summaries__2__0.30.csv')
-  df4 = pd.read_csv('data/spotify_summaries__3__0.30.csv')
-  df = pd.concat([df1, df2, df3, df4], ignore_index = True)
-  print(df)
+  df = pd.read_csv(lyrics_file)
   df['lyrics'] = df['lyrics'].apply(str)
   return df
 
 
-def load_embeddings():
+def w2v_embeddings(df_lyrics, agg_type):
   print('Loading word embeddings...')
   w2v = {}
-  with open('data/vocab_embeddings.txt') as f:
+  with open('data/w2v_vocab_embeddings.txt') as f:
     for line in f:
       line = line.split()
       word, emb = line[0], np.array(list(map(float, line[1:])))
       w2v[word] = emb
-  return w2v
+
+  def _get_embedding(lyrics):
+    lyrics = nltk.word_tokenize(lyrics)
+    embeddings = np.array([w2v.get(w, np.zeros(300)) for w in lyrics])
+    if agg_type == 'avg':
+      return embeddings.mean(axis=0)
+    elif agg_type == 'sum':
+      return embeddings.sum(axis=0)
+    raise Exception(f"Aggregation type '{agg_type}' not implemented!")
+
+  # Get average embeddings
+  df_lyrics['embedding'] = df_lyrics['lyrics'].apply(_get_embedding)
 
 
-def avg_embedding(lyrics, w2v, dim):
-  lyrics = nltk.word_tokenize(lyrics)
-  embeddings = np.array([w2v.get(w, np.zeros(dim)) for w in lyrics])
-  return embeddings.mean(axis=0)
+def parse_args(args):
+  def exit():
+    print(f'Usage: {args[0]} <lyrics_file.csv> <output_file.csv> <w2v|bert> <avg|sum|min|max>')
+    sys.exit(-1)
+
+  if len(args) != 5:
+    exit()
+  success = args[3] in ('w2v',)
+  success &= args[4] in ('avg',)
+
+  if not success:
+    exit()
+  return args[1:]
+
+
+EMBEDDINGS_FN = {
+    'w2v': w2v_embeddings
+}
 
 
 if __name__ == '__main__':
+  lyrics_file, output_file, emb_type, agg_type = parse_args(sys.argv)
+
   t0 = time.time()
 
   # Load data
-  df_lyrics = load_lyrics()
-  w2v = load_embeddings()
+  df_lyrics = load_lyrics(lyrics_file)
 
-  # Get average embeddings
-  df_lyrics['embedding'] = df_lyrics['lyrics'].apply(lambda l: avg_embedding(l, w2v, 300))
+  # Add embeddings
+  EMBEDDINGS_FN[emb_type](df_lyrics, agg_type)
 
   # Save
-  outfile = 'data/spotify_summary_0.30_embeddings.csv'
-  print(f'Saving into {outfile}')
-  df_lyrics[['artist', 'track', 'embedding']].to_csv(outfile, index=False)
+  print(f'Saving into {output_file}')
+  df_lyrics[['artist', 'track', 'embedding']].to_csv(output_file, index=False)
 
   # Print time elapsed
   print(datetime.timedelta(seconds=time.time() - t0))
