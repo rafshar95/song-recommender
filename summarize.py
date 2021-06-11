@@ -159,7 +159,7 @@ def klsum_summarize(original_text, s):
     res = ""
     for sentence in kl_summary:
 
-        res+= str(sentence)
+        res+= (str(sentence) + '.' + "\n")
 
     return res
 
@@ -177,6 +177,8 @@ def main():
     t0 = time.time()
     # Load data
 
+    """
+
     for f in range(3, 4):
 
         infile = 'data/spotify_lyrics.csv'
@@ -187,9 +189,9 @@ def main():
         outfile = 'data/spotify_summaries_T5_{}.csv'.format(f*10)
         print(f'Saving into {outfile}')
         df_lyrics.to_csv(outfile, index=False)
-
         """
-    for s in range(1,4):
+
+    for s in range(2,3):
 
         infile = 'data/spotify_lyrics_atLeast_10linebreaks.csv'
         df_lyrics = load_lyrics(infile)
@@ -201,7 +203,7 @@ def main():
         print(f'Saving into {outfile}')
         df_lyrics.to_csv(outfile, index=False)
 
-        """
+
 
 
     print(datetime.timedelta(seconds=time.time() - t0))

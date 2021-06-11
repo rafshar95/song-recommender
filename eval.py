@@ -61,7 +61,7 @@ def eval_playlist(ranked_songs, test, index_sid):
     return result
 
 
-def evaluate(playlists, dist, output_path, test_to_seed_ratio=0.2, num_recs=100):
+def evaluate(playlists, dist, output_path, epoch_id, test_to_seed_ratio=0.2, num_recs=100):
     assert(100 <= num_recs <= playlists.shape[0])
     results = defaultdict(lambda: np.array([0.0, 0.0, 0.0]))
     index_sid = playlists.columns.get_loc('sid')
@@ -73,7 +73,7 @@ def evaluate(playlists, dist, output_path, test_to_seed_ratio=0.2, num_recs=100)
 
     """
 
-    epochs = [2]
+    epochs = [epoch_id]
 
     random_seed = [33, 72, 57, 78, 48]
 
@@ -115,7 +115,7 @@ def main():
 
     df3 = pd.merge(df2, df1, on=['artist', 'track'], how='left')
 
-    evaluate(df3, dist, output_path="out/result_" + sys.argv[2][:-14][8:]) #it removes spotify prefix and embeddings suffix from the output file
+    evaluate(df3, dist, "out/result_" + sys.argv[2][:-14][8:], int(sys.argv[3])) #it removes spotify prefix and embeddings suffix from the output file
 
 
 if __name__== "__main__":
