@@ -44,7 +44,7 @@ def w2v_embeddings(df_lyrics, agg_type, num_processors):
 
 def bert_worker(i, artist, track, lyrics, get_embedding_fn, agg_type, tokenizer, models):
   wid = int(current_process().name[-1]) - 1
-  print(f'[processor {wid}] i={i}')
+  print(f'[processor {wid}] i={i:<6} {artist:<20} {track:>30}')
   embedding = get_embedding_fn(tokenizer, agg_type, models[wid], lyrics)
   with open(f'wid_{wid}_done.txt', 'a') as f:
     f.write(f'"{artist}","{track}","{embedding}"\n')
@@ -57,6 +57,7 @@ def get_bert_embeddings(tokenizer, agg_type, model, lyrics):
 
   sentences = lyrics.split('\n')
   sentences = list(filter(None, sentences))  # Filter out empty lines
+  sentences = [' '.join(s.split()[:369]) for s in sentences]
 
   # Tokenize and encode
   encoded_input = tokenizer(sentences, return_tensors='pt', padding=True)
